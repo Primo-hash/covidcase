@@ -1,0 +1,4 @@
+github.com/alediaferia/gocountries v0.0.0-20150710192521-aaf4e81715ec h1:MpKw0dVqG6j9+V3dnmjIOzzL1dI4BFcE8x1IxcIblVQ=
+github.com/alediaferia/gocountries v0.0.0-20150710192521-aaf4e81715ec/go.mod h1:09hXhYnr/5zMJyMd5xTdVc/FIbC04dOLHnDshIwW2Cs=
+github.com/go-chi/chi v1.5.3 h1:+DVDS9/D3MTbEu3WrrH3oz9oP6PlSPSNj8LLw3X17yU=
+github.com/go-chi/chi v1.5.3/go.mod h1:Q8xfe6s3fjZyMr8ZTv5jL+vxhVaFyCq2s+RvSfzTD0E=
