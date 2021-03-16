@@ -21,8 +21,8 @@ type CaseInfo struct {
 	Country              string  `json:"country"`
 	Continent            string  `json:"continent"`
 	Scope                string  `json:"scope"`
-	Confirmed            int     `json:"confirmed"`
-	Recovered            int     `json:"recovered"`
+	Confirmed            float64 `json:"confirmed"`
+	Recovered            float64 `json:"recovered"`
 	PopulationPercentage string `json:"population_percentage"`
 }
 
@@ -83,7 +83,7 @@ type Country []struct {
 GetCountryData returns a map of a decoded json object with
 specified total confirmed cases and total of recovered based on a timescope(date) specified
 */
-func GetCountryData(startDate, endDate, countryName string) (map[string]interface{}, error) {
+func GetCountryData(startDate, endDate, countryName string) (CaseInfo, error) {
 	var result map[string]interface{}
 	var caseInfo CaseInfo
 
@@ -91,23 +91,27 @@ func GetCountryData(startDate, endDate, countryName string) (map[string]interfac
 		// Insert parameters into CASEURL for HTTP GET request
 		resData, err := http.Get(fmt.Sprintf(CASEURL, countryName))
 		if err != nil { // Error handling data
-			return nil, err
+			return caseInfo, err
 		}
 		result, err = Decode(resData, "")	// Decode for data extraction into Caseinfo struct
+		if err != nil { // Error handling data
+			return caseInfo, err
+		}
 
 		// Inserting and processing data into caseInfo struct
-		caseInfo.Country = result["All"].(map[string]string)["country"]			// Country
-		caseInfo.Continent = result["All"].(map[string]string)["continent"]		// Continent
-		caseInfo.Scope = "total"												// Scope
-		caseInfo.Confirmed = result["All"].(map[string]int)["confirmed"]		// Confirmed cases
-		caseInfo.Recovered = result["All"].(map[string]int)["recovered"]		// Recovered cases
+		// Remember to use type assertion at the end ".(int)/.(string)" since the program has to deal with interface{}
+		caseInfo.Country = result["All"].(map[string]interface{})["country"].(string)			// Country
+		caseInfo.Continent = result["All"].(map[string]interface{})["continent"].(string)		// Continent
+		caseInfo.Scope = "total"												                // Scope
+		caseInfo.Confirmed = result["All"].(map[string]interface{})["confirmed"].(float64)		    // Confirmed cases
+		caseInfo.Recovered = result["All"].(map[string]interface{})["recovered"].(float64)		    // Recovered cases
 		// Percentage of population with a confirmed case
-		percentage := float64(caseInfo.Confirmed) / float64(result["All"].(map[string]int)["population"])
-		caseInfo.PopulationPercentage = fmt.Sprintf("%.2f", percentage)	//
+		percentage := caseInfo.Confirmed / result["All"].(map[string]interface{})["population"].(float64)
+		caseInfo.PopulationPercentage = fmt.Sprintf("%.2f", percentage)
 
-		return Decode(resData, "date")
+		return caseInfo, nil
 	} else {							  // Format within scope of date specified
-		return nil, nil
+		return caseInfo, nil
 	}
 }
 
