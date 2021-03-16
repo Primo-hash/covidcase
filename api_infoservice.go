@@ -138,13 +138,11 @@ func handleCountryGet(w http.ResponseWriter, r *http.Request) {
 	scope := r.URL.Query().Get("scope")
 	// Extract start and end date from scope
 	sDate, eDate := split(scope, "-", 3)
-	fmt.Println(sDate)
-	fmt.Println(eDate)
-	fmt.Println(countryName)
 
 
 
-	/*
+
+
 	// Request currency code for country
 	currencyCode, err := country.GetCurrency(countryName)
 	if err != nil { // Error handling bad request parameter for countryName
@@ -162,9 +160,9 @@ func handleCountryGet(w http.ResponseWriter, r *http.Request) {
 		// Error could also be a 400 or failure in decoding, but we print that only internally
 		fmt.Println("HTTP/JSON status: " + err.Error())
 	}
-	*/
+
 	// Send result for processing
-	//resWithData(w, result)
+	resWithData(w, result)
 }
 
 // handleBorderGet utility function, package level, to handle GET request to border route
