@@ -1,4 +1,4 @@
 .DS_Store
 .idea/*
 .vscode/*
-cmd/exchange_server
+cmd/covidcase_server

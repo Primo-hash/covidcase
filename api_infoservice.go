@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+const DATELEN = 21
 var appStart time.Time
 
 // Diagnose struct for JSON encoding
@@ -66,12 +67,12 @@ func HandlerLostUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandlerHistory main handler for route related to `/exchangehistory` requests
+// HandlerCountry main handler for route related to `/country` requests
 func HandlerCountry() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			handleHistoryGet(w, r)
+			handleCountryGet(w, r)
 		case http.MethodPost:
 			http.Error(w, "Not implemented", http.StatusNotImplemented)
 		case http.MethodPut:
@@ -116,20 +117,34 @@ func HandlerDiag(t time.Time) func(http.ResponseWriter, *http.Request) {
 }
 
 
-// handleHistoryGet utility function, package level, to handle GET request to history route
-func handleHistoryGet(w http.ResponseWriter, r *http.Request) {
+// handleCountryGet utility function, package level, to handle GET request to country route
+func handleCountryGet(w http.ResponseWriter, r *http.Request) {
 	// Set response to be of JSON type
 	http.Header.Add(w.Header(), "content-type", "application/json")
 	parts := strings.Split(r.URL.Path, "/")
 	// error handling
-	if len(parts) != 6 || parts[3] != "exchangehistory" {
+	if len(parts) != 5 || parts[3] != "country" {
 		http.Error(w, "Malformed URL", http.StatusBadRequest)
 		return
 	}
 	// extract URL parameters
 	countryName := p(r, "country_name")
-	beginDate := p(r, "b_year") + "-" + p(r, "b_month") + "-" + p(r, "b_day")
-	endDate := p(r, "e_year") + "-" + p(r, "e_month") + "-" + p(r, "e_day")
+
+	// Handling case sensitivity of country name (lowercase all letters then capitalize first letter)
+	countryName = strings.ToLower(countryName) // All letters lower case
+	countryName = strings.Title(countryName) // First letter capitalized
+
+	// Extract optional 'scope' parameter
+	scope := r.URL.Query().Get("scope")
+	// Extract start and end date from scope
+	sDate, eDate := split(scope, "-", 3)
+	fmt.Println(sDate)
+	fmt.Println(eDate)
+	fmt.Println(countryName)
+
+
+
+	/*
 	// Request currency code for country
 	currencyCode, err := country.GetCurrency(countryName)
 	if err != nil { // Error handling bad request parameter for countryName
@@ -147,9 +162,9 @@ func handleHistoryGet(w http.ResponseWriter, r *http.Request) {
 		// Error could also be a 400 or failure in decoding, but we print that only internally
 		fmt.Println("HTTP/JSON status: " + err.Error())
 	}
-
+	*/
 	// Send result for processing
-	resWithData(w, result)
+	//resWithData(w, result)
 }
 
 // handleBorderGet utility function, package level, to handle GET request to border route
@@ -247,6 +262,19 @@ func handleDiagGet(w http.ResponseWriter, r *http.Request) {
 // p is a shortened function for extracting URL parameters
 func p(r *http.Request, key string) string {
 	return chi.URLParam(r, key)
+}
+
+// split uses strings.Split and strings.Join to separate a string on the Nth occurrence of a character and returns
+// both parts of the string
+func split(s, sep string, pos int) (string, string) {
+	// Check if date entered has a valid length of 21 chars
+	if len(s) != DATELEN {
+		return "", "" // Empty return
+	} else {
+		str := strings.Split(s, sep)
+		// Join seperated parts using sep character and return both split ends of the string
+		return strings.Join(str[:pos], sep), strings.Join(str[pos:], sep)
+	}
 }
 
 // getLimit converts string number into int and returns int, for limiting option

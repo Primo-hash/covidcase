@@ -15,7 +15,7 @@ import (
  */
 const (
 	// Chi regex parameters
-	COUNTRY = "{country_name:[a-z]+}"			  // Country name
+	COUNTRY = "{country_name:[A-Za-z]+}"			  // Country name
 	//BY = "{b_year:\\d\\d\\d\\d}"		   		  // Begin year
 	//BM = "{b_month:\\d\\d}"		   	  			  // Begin month
 	//BD = "{b_day:\\d\\d}"		   		          // Begin day
