@@ -1,9 +1,9 @@
-package exchange
+package covidcase
 
 import (
+	"covidcase/country"
+	"covidcase/currency"
 	"encoding/json"
-	"exchange/country"
-	"exchange/currency"
 	"fmt"
 	"github.com/go-chi/chi"
 	"html/template"
@@ -67,7 +67,7 @@ func HandlerLostUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandlerHistory main handler for route related to `/exchangehistory` requests
-func HandlerHistory() func(http.ResponseWriter, *http.Request) {
+func HandlerCountry() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:

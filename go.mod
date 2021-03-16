@@ -1,4 +1,4 @@
-module exchange
+module covidcase
 
 // +heroku goVersion go1.13
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"exchange"
+	"covidcase"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"log"
@@ -16,12 +16,12 @@ import (
 const (
 	// Chi regex parameters
 	COUNTRY = "{country_name:[a-z]+}"			  // Country name
-	BY = "{b_year:\\d\\d\\d\\d}"		   		  // Begin year
-	BM = "{b_month:\\d\\d}"		   	  			  // Begin month
-	BD = "{b_day:\\d\\d}"		   		          // Begin day
-	EY = "{e_year:\\d\\d\\d\\d}"		   		  // End year
-	EM = "{e_month:\\d\\d}"		   	              // End month
-	ED = "{e_day:\\d\\d}"		   		          // End day
+	//BY = "{b_year:\\d\\d\\d\\d}"		   		  // Begin year
+	//BM = "{b_month:\\d\\d}"		   	  			  // Begin month
+	//BD = "{b_day:\\d\\d}"		   		          // Begin day
+	//EY = "{e_year:\\d\\d\\d\\d}"		   		  // End year
+	//EM = "{e_month:\\d\\d}"		   	              // End month
+	//ED = "{e_day:\\d\\d}"		   		          // End day
 )
 
 func main() {
@@ -40,10 +40,10 @@ func main() {
 	r.Use(middleware.Logger)
 
 	// Routes
-	r.Get("/exchange/v1/exchangehistory/"+COUNTRY+"/"+BY+"-"+BM+"-"+BD+"-"+EY+"-"+EM+"-"+ED, exchange.HandlerHistory())
-	r.Get("/exchange/v1/exchangeborder/"+COUNTRY, exchange.HandlerBorder())
-	r.Get("/exchange/v1/diag/", exchange.HandlerDiag(appStart))	// Pass appStart time value for use in this route
-	r.Get("/*", exchange.HandlerLostUser) // Route for any other query not handled by API
+	r.Get("/corona/v1/country/"+COUNTRY, covidcase.HandlerCountry()) // optional query parameter "scope" as start/end date
+	r.Get("/exchange/v1/exchangeborder/"+COUNTRY, covidcase.HandlerBorder())
+	r.Get("/exchange/v1/diag/", covidcase.HandlerDiag(appStart))	// Pass appStart time value for use in this route
+	r.Get("/*", covidcase.HandlerLostUser) // Route for any other query not handled by API
 
 	log.Fatal(http.ListenAndServe(":"+port, r))
 }
