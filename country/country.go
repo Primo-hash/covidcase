@@ -12,9 +12,9 @@ import (
 URL list for 'REST Countries API' to be modified to query needs
 */
 const BASEURL = "https://covid-api.mmediagroup.fr/v1/cases" // For healthchecks
-const CASEURL = "https://covid-api.mmediagroup.fr/v1/cases?country=%s" // For all cases
-const CONFSCOPEURL = "https://covid-api.mmediagroup.fr/v1/history?country=%s&status=Confirmed" // Confirmed history
-const RECSCOPEURL = "https://covid-api.mmediagroup.fr/v1/history?country=%s&status=Recovered" // Recovered history
+const CASEURL = "https://covid-api.mmediagroup.fr/v1/cases?country=%s" // For all covid cases
+const SCOPEURL = "https://covid-api.mmediagroup.fr/v1/history?country=%s&status=Confirmed" // Cases within a date scope
+const ALPHA3URL = "https://restcountries.eu/rest/v2/name/%s" // Retrieves general info about a country
 
 // Diagnose struct for JSON encoding
 type CaseInfo struct {
@@ -26,57 +26,10 @@ type CaseInfo struct {
 	PopulationPercentage string `json:"population_percentage"`
 }
 
-// Country struct for JSON encoding
+// Country struct for data extraction of ALPHA-3 code
 type Country []struct {
-	Name           string    `json:"name"`
-	TopLevelDomain []string  `json:"topLevelDomain"`
-	Alpha2Code     string    `json:"alpha2Code"`
 	Alpha3Code     string    `json:"alpha3Code"`
-	CallingCodes   []string  `json:"callingCodes"`
-	Capital        string    `json:"capital"`
-	AltSpellings   []string  `json:"altSpellings"`
 	Region         string    `json:"region"`
-	Subregion      string    `json:"subregion"`
-	Population     int       `json:"population"`
-	Latlng         []float64 `json:"latlng"`
-	Demonym        string    `json:"demonym"`
-	Area           float64   `json:"area"`
-	Gini           float64   `json:"gini"`
-	Timezones      []string  `json:"timezones"`
-	Borders        []string  `json:"borders"`
-	NativeName     string    `json:"nativeName"`
-	NumericCode    string    `json:"numericCode"`
-	Currencies     []struct {
-		Code   string `json:"code"`
-		Name   string `json:"name"`
-		Symbol string `json:"symbol"`
-	} `json:"currencies"`
-	Languages []struct {
-		Iso6391    string `json:"iso639_1"`
-		Iso6392    string `json:"iso639_2"`
-		Name       string `json:"name"`
-		NativeName string `json:"nativeName"`
-	} `json:"languages"`
-	Translations struct {
-		De string `json:"de"`
-		Es string `json:"es"`
-		Fr string `json:"fr"`
-		Ja string `json:"ja"`
-		It string `json:"it"`
-		Br string `json:"br"`
-		Pt string `json:"pt"`
-		Nl string `json:"nl"`
-		Hr string `json:"hr"`
-		Fa string `json:"fa"`
-	} `json:"translations"`
-	Flag          string `json:"flag"`
-	RegionalBlocs []struct {
-		Acronym       string        `json:"acronym"`
-		Name          string        `json:"name"`
-		OtherAcronyms []interface{} `json:"otherAcronyms"`
-		OtherNames    []interface{} `json:"otherNames"`
-	} `json:"regionalBlocs"`
-	Cioc string `json:"cioc"`
 }
 
 /*
@@ -93,24 +46,51 @@ func GetCountryData(startDate, endDate, countryName string) (CaseInfo, error) {
 		if err != nil { // Error handling data
 			return caseInfo, err
 		}
-		result, err = Decode(resData, "")	// Decode for data extraction into Caseinfo struct
+		result, err = DecodeToMap(resData, "")	// Decode for data extraction into Caseinfo struct
 		if err != nil { // Error handling data
 			return caseInfo, err
 		}
 
 		// Inserting and processing data into caseInfo struct
-		// Remember to use type assertion at the end ".(int)/.(string)" since the program has to deal with interface{}
+		// Remember to use type assertion at the end ".(float64)/.(string)" since the program has to deal with interface{}
 		caseInfo.Country = result["All"].(map[string]interface{})["country"].(string)			// Country
 		caseInfo.Continent = result["All"].(map[string]interface{})["continent"].(string)		// Continent
 		caseInfo.Scope = "total"												                // Scope
 		caseInfo.Confirmed = result["All"].(map[string]interface{})["confirmed"].(float64)		    // Confirmed cases
 		caseInfo.Recovered = result["All"].(map[string]interface{})["recovered"].(float64)		    // Recovered cases
 		// Percentage of population with a confirmed case
-		percentage := caseInfo.Confirmed / result["All"].(map[string]interface{})["population"].(float64)
+		percentage := caseInfo.Confirmed / result["All"].(map[string]interface{})["population"].(float64) * 100
 		caseInfo.PopulationPercentage = fmt.Sprintf("%.2f", percentage)
 
 		return caseInfo, nil
 	} else {							  // Format within scope of date specified
+
+		// Insert parameters into SCOPEURL for HTTP GET request
+		resData, err := http.Get(fmt.Sprintf(SCOPEURL, countryName))			// Confirmed cases
+		if err != nil { // Error handling data
+			return caseInfo, err
+		}
+		// Processing scope
+		result, err = DecodeToMap(resData, "")	// Decode for data extraction into Caseinfo struct
+		if err != nil { // Error handling data
+			return caseInfo, err
+		}
+
+		// Extracting confirmed cases at start date and end date for scope calculation
+		startDateCases := result["All"].(map[string]interface{})["dates"].(map[string]interface{})[startDate].(float64)
+		endDateCases := result["All"].(map[string]interface{})["dates"].(map[string]interface{})[endDate].(float64)
+
+		// Inserting data into caseInfo struct
+		// Remember to use type assertion at the end ".(float)/.(string)" since the program has to deal with interface{}
+		caseInfo.Country = result["All"].(map[string]interface{})["country"].(string)	    // Country
+		caseInfo.Continent = result["All"].(map[string]interface{})["continent"].(string)	// Continent
+		caseInfo.Scope = startDate + "-" + endDate											// Scope
+		caseInfo.Confirmed = endDateCases - startDateCases	// Confirmed cases
+		caseInfo.Recovered = 0		    // No recovery cases response
+		// Percentage of population with a confirmed case
+		percentage := caseInfo.Confirmed / result["All"].(map[string]interface{})["population"].(float64) * 100
+		caseInfo.PopulationPercentage = fmt.Sprintf("%.2f", percentage)
+
 		return caseInfo, nil
 	}
 }
@@ -129,54 +109,26 @@ func GetCurrency(countryName string) (string, error) {
 }
 
 /*
-GetNeighbour returns a string of specified Country's Neighbours' currency codes
-* limit parameter is for restricting the amount of currencies returned
+GetAlpha3 returns a string of specified Country's ALPHA-3 code and Continent
 */
-func GetNeighbour(countryName string, limit int) (string, error) {
-	var borderURL = BASEURL // URL string for modification
-	var countries Country // Holds JSON object values
+func GetAlpha3(countryName string) (string, string, error) {
+	var countries Country // Holds JSON object values, query might return multiple countries
 
-	// Query for structs of possible countries
-	country, err := gocountries.CountriesByName(countryName)
-	// Extract first country
-	c := country[0]
-	// Extract border alpha codes
-	neighbourAlpha := c.Borders[:]
-	// To avoid indexing out of neighbourAlpha's range
-	if limit > len(neighbourAlpha) {limit = len(neighbourAlpha)}
-	// parse neighbour alpha codes and append to API call URL
-	for i:= 0; i < limit; i++ {
-		if i >= limit {
-			// Nothing happens if index exceeds limit
-		} else if i == limit - 1  {		// If last element in array
-			borderURL += neighbourAlpha[i] // Avoid appending with ';' at the end
-		} else if i < limit { 				// If not last element in array
-			borderURL += neighbourAlpha[i] + ";"
-		}
+	// Insert parameters into CASEURL for HTTP GET request
+	resData, err := http.Get(fmt.Sprintf(ALPHA3URL, countryName))
+	if err != nil { // Error handling data
+		return "", "", err
 	}
-	// Using http API for restcountriesAPI because gocountries pckg does not support searching by country code
-	// Send HTTP GET request
-	resData, err := http.Get(borderURL)
-	if err != nil { // Error handling HTTP request
-		return "", err
-	}
-	defer resData.Body.Close() // Closing body after finishing read
-	// Decoding body
+
+	// Decode into countries object
 	err = json.NewDecoder(resData.Body).Decode(&countries)
 	if err != nil {
-		fmt.Println("Decoding: " + err.Error())
-		return "", err
+		return "", "", err
 	}
-	// Make string value of neighbour country currencies for return
-	currencyCodes := ""
-	for i, a := range countries {
-		if i != len(countries) - 1 {		// If not last element in array
-			currencyCodes += a.Currencies[0].Code + ","
-		} else {
-			currencyCodes += a.Currencies[0].Code // Avoid appending with ',' at the end
-		}
-	}
-	return currencyCodes, nil
+	// Extract ALPHA-3 from first country
+	alpha := countries[0].Alpha3Code
+	continent := countries[0].Region
+	return alpha, continent, nil
 }
 
 /*
@@ -196,7 +148,7 @@ func HealthCheck() (string, error) {
 Decode returns a decoded map from a decoded JSON
 * Optional removal of a key in decoded map
 */
-func Decode(data *http.Response, filter string) (map[string]interface{}, error) {
+func DecodeToMap(data *http.Response, filter string) (map[string]interface{}, error) {
 	var result = make(map[string]interface{})		// Body object
 
 	defer data.Body.Close() // Closing body after finishing read

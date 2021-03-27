@@ -153,6 +153,7 @@ func handleCountryGet(w http.ResponseWriter, r *http.Request) {
 
 // handleBorderGet utility function, package level, to handle GET request to border route
 func handleBorderGet(w http.ResponseWriter, r *http.Request) {
+	/*
 	// Set response to be of JSON type
 	http.Header.Add(w.Header(), "content-type", "application/json")
 	parts := strings.Split(r.URL.Path, "/")
@@ -200,6 +201,7 @@ func handleBorderGet(w http.ResponseWriter, r *http.Request) {
 
 	// Send result for processing
 	resWithData(w, result)
+	*/
 }
 
 // handleDiagGet utility function, package level, to handle GET request to diag route
