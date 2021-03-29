@@ -3,3 +3,5 @@ github.com/alediaferia/gocountries
 # github.com/go-chi/chi v1.5.3
 github.com/go-chi/chi
 github.com/go-chi/chi/middleware
+# github.com/go-chi/cors v1.2.0
+github.com/go-chi/cors

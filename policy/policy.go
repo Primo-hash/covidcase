@@ -1,8 +1,8 @@
 package policy
 
 import (
+	"covidcase/utils"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -10,24 +10,24 @@ import (
 
 /*
 URL list for 'Policy API' to be modified to query needs
- */
+*/
 const BASEURL = "https://covidtrackerapi.bsg.ox.ac.uk/api/"
-const LATESTURL = "https://covidtrackerapi.bsg.ox.ac.uk/api/v2/stringency/actions/%s/%s" // URL for latest policy
+const LATESTURL = "https://covidtrackerapi.bsg.ox.ac.uk/api/v2/stringency/actions/%s/%s"   // URL for latest policy
 const SCOPEURL = "https://covidtrackerapi.bsg.ox.ac.uk/api/v2/stringency/date-range/%s/%s" // URL for policy in scope
-const ALPHA3URL = "https://restcountries.eu/rest/v2/name/%s" // Retrieves general info about a country
+const ALPHA3URL = "https://restcountries.eu/rest/v2/name/%s"                               // Retrieves general info about a country
 
 // StringencyInfo struct for JSON encoding HTTP request data
 type StringencyInfo struct {
-	Country              string  `json:"country"`
-	Scope                string  `json:"scope"`
-	Stringency           float64 `json:"stringency"`
-	Trend            	 float64 `json:"trend"`
+	Country    string  `json:"country"`
+	Scope      string  `json:"scope"`
+	Stringency float64 `json:"stringency"`
+	Trend      float64 `json:"trend"`
 }
 
 // Country struct for data extraction of ALPHA-3 code
 type Country []struct {
-	Alpha3Code     string    `json:"alpha3Code"`
-	Region         string    `json:"region"`
+	Alpha3Code string `json:"alpha3Code"`
+	Region     string `json:"region"`
 }
 
 /*
@@ -46,35 +46,35 @@ func GetPolicyData(startDate, endDate, countryName string) (StringencyInfo, erro
 
 	if startDate == "" || endDate == "" { // Format within complete scope
 		now := time.Now()
-		now = now.AddDate(0, 0, -10)	// Latest values are from 10 days ago
-		latestDate := now.Format("2006-01-02") 	// YYYY-MM-DD string
+		now = now.AddDate(0, 0, -10)           // Latest values are from 10 days ago
+		latestDate := now.Format("2006-01-02") // YYYY-MM-DD string
 
 		// Insert parameters into POLICYURL for HTTP GET request
 		resData, err := http.Get(fmt.Sprintf(LATESTURL, alpha3, latestDate))
 		if err != nil { // Error handling data
 			return stringencyInfo, err
 		}
-		result, err = DecodeToMap(resData, "")	// Decode for data extraction into StringencyInfo struct
-		if err != nil { // Error handling data
+		result, err = utils.DecodeResponseToMap(resData, "") // Decode for data extraction into StringencyInfo struct
+		if err != nil {                                      // Error handling data
 			return stringencyInfo, err
 		}
 
 		// Inserting and processing data into stringencyInfo struct
 		// Remember to use type assertion at the end ".(float64)/.(string)" since the program has to deal with interface{}
-		stringencyInfo.Country = countryName				// Country
-		stringencyInfo.Scope = "total"						// Scope
-		stringencyInfo.Stringency = getStringency(result, "stringency_actual").(float64)	// Stringency value
+		stringencyInfo.Country = countryName                                             // Country
+		stringencyInfo.Scope = "total"                                                   // Scope
+		stringencyInfo.Stringency = getStringency(result, "stringency_actual").(float64) // Stringency value
 		stringencyInfo.Trend = 0
 
 		return stringencyInfo, nil
-	} else {							  // Format within scope of date specified
+	} else { // Format within scope of date specified
 		// Insert parameters into POLICYURL for HTTP GET request
 		resData, err := http.Get(fmt.Sprintf(SCOPEURL, startDate, endDate))
 		if err != nil { // Error handling data
 			return stringencyInfo, err
 		}
-		result, err = DecodeToMap(resData, "")	// Decode for data extraction into StringencyInfo struct
-		if err != nil { // Error handling data
+		result, err = utils.DecodeResponseToMap(resData, "") // Decode for data extraction into StringencyInfo struct
+		if err != nil {                                      // Error handling data
 			return stringencyInfo, err
 		}
 
@@ -87,46 +87,17 @@ func GetPolicyData(startDate, endDate, countryName string) (StringencyInfo, erro
 
 		// Inserting and processing data into stringencyInfo struct
 		// Remember to use type assertion at the end ".(float64)/.(string)" since the program has to deal with interface{}
-		stringencyInfo.Country = countryName							    					// Country
-		stringencyInfo.Scope = "total"									    					// Scope
-		stringencyInfo.Stringency = endDateStringency.(float64)									// Stringency
-		if stringencyInfo.Stringency == -1 {	// Check if missing information, set to 0 if so
+		stringencyInfo.Country = countryName                    // Country
+		stringencyInfo.Scope = "total"                          // Scope
+		stringencyInfo.Stringency = endDateStringency.(float64) // Stringency
+		if stringencyInfo.Stringency == -1 {                    // Check if missing information, set to 0 if so
 			stringencyInfo.Trend = 0
 		} else {
-			stringencyInfo.Trend = endDateStringency.(float64) - startDateStringency.(float64)	// Trend
+			stringencyInfo.Trend = endDateStringency.(float64) - startDateStringency.(float64) // Trend
 		}
 
 		return stringencyInfo, nil
 	}
-}
-
-/*
-Decode returns a decoded map from a decoded JSON
-* Optional removal of a key in decoded map
-*/
-func Decode(data *http.Response, filter string) (map[string]interface{}, error) {
-	var result = make(map[string]interface{})		// Body object
-
-	defer data.Body.Close() // Closing body after finishing read
-	if data.StatusCode != 200 { // Error handling HTTP request
-		e := errors.New(data.Status)
-		return nil, e
-	}
-	// Decoding body
-	err := json.NewDecoder(data.Body).Decode(&result)
-	if err != nil { // Error handling decoding
-		return nil, err
-	}
-	// Optional filtering of certain key in map
-	if filter != "" {
-		// Check for filter word existence
-		_, ok := result[filter]
-		if ok {
-			delete(result, filter)
-		}
-	}
-	// Return map with requested data
-	return result, err
 }
 
 /*
@@ -177,43 +148,14 @@ getStringencyScope recursive func that returns a value 'stringency_actual' or 's
 if it exists for the scope parameter
 */
 func getStringencyScope(data map[string]interface{}, date, alpha3, key string) (interface{}, bool) {
-	res, ok := data[date].(map[string]interface{})[alpha3].(map[string]interface{})[key]	// First key
-	if !ok {	// incase first key doesn't work try second
+	res, ok := data[date].(map[string]interface{})[alpha3].(map[string]interface{})[key] // First key
+	if !ok {                                                                             // incase first key doesn't work try second
 		res, ok = getStringencyScope(data, date, alpha3, "stringency")
 		if !ok {
-			return -1, true		// Return -1 if no keys found
+			return -1, true // Return -1 if no keys found
 		} else {
-			return res, true   // Return second key if found
+			return res, true // Return second key if found
 		}
 	}
 	return res, true
-}
-
-/*
-Decode returns a decoded map from a decoded JSON
-* Optional removal of a key in decoded map
-*/
-func DecodeToMap(data *http.Response, filter string) (map[string]interface{}, error) {
-	var result = make(map[string]interface{})		// Body object
-
-	defer data.Body.Close() // Closing body after finishing read
-	if data.StatusCode != 200 { // Error handling HTTP request
-		e := errors.New(data.Status)
-		return nil, e
-	}
-	// Decoding body
-	err := json.NewDecoder(data.Body).Decode(&result)
-	if err != nil { // Error handling decoding
-		return nil, err
-	}
-	// Optional filtering of certain key in map
-	if filter != "" {
-		// Check for filter word existence
-		_, ok := result[filter]
-		if ok {
-			delete(result, filter)
-		}
-	}
-	// Return map with requested data
-	return result, err
 }

@@ -9,48 +9,37 @@ import (
 	"html/template"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
 
-const DATELEN = 21	// Length of startDate and endDate optional param characters
+const DATELEN = 21     // Length of startDate and endDate optional param characters
 var appStart time.Time // Uptime variable
 
 // Diagnose struct for JSON encoding
 type Diagnose struct {
-	Mmediagroupapi   string `json:"mmediagroupapi"`
-	Covidtrackerapi  string `json:"covidtrackerapi"`
-	Registered		 float64`json:"registered"`
-	Version          string `json:"version"`
-	Uptime           string `json:"uptime"`
+	Mmediagroupapi  string  `json:"mmediagroupapi"`
+	Covidtrackerapi string  `json:"covidtrackerapi"`
+	Registered      float64 `json:"registered"`
+	Version         string  `json:"version"`
+	Uptime          string  `json:"uptime"`
+}
+
+// WebhookForm struct for JSON decoding
+type WebhookForm struct {
+	URL     string  `json:"url"`
+	Timeout float64 `json:"timeout"`
+	Field   string  `json:"field"`
+	Country string  `json:"country"`
+	Trigger string  `json:"trigger"`
 }
 
 /*
-HandlerLostUser is a function for guiding lost souls back to the right 'relative' path
+HandlerLostUser function for handling divergent URL
 */
 func HandlerLostUser(w http.ResponseWriter, r *http.Request) {
-	protocol := "http://"
-	host := r.Host 					// Host URL
-	pathAPI := "/exchange/v1/" 		// API path
-
-	// API request queries
-	pathHistory := "exchangehistory/norway/2020-03-01-2020-03-03"
-	pathBorder := "exchangeborder/norway?limit=2"
-	pathDiag := "diag/"
-
-	line1 := "Hello! You seem lost! Let me help you!"
-	line2 := "These are some examples:"
-	history := protocol + host + pathAPI + pathHistory
-	border := protocol + host + pathAPI + pathBorder
-	diagnose := protocol + host + pathAPI + pathDiag
-
-	// HTML form for response such that URLs are hyperlinks
-	var form = `<p>`+line1+`</p>
-				<p>`+line2+`</p>
-			    <p><a href="`+history+`">`+history+`</a></p>
-				<p><a href="`+border+`">`+border+`</a></p>
-				<p><a href="`+diagnose+`">`+diagnose+`</a></p>`
+	// HTML form for response
+	var form = `<p>404 Not Found</p>`
 
 	// Generate HTML template from Form
 	res := template.New("table")
@@ -65,6 +54,38 @@ func HandlerLostUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Could not process request", http.StatusInternalServerError)
 		fmt.Println("Could not write back response: " + err.Error())
+	}
+}
+
+// HandlerNotification main handler for route related to `/notification/{id}` requests
+func HandlerNotification() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			//handleNotificationsGet(w, r)
+		case http.MethodPost:
+			//handleNotificationPost(w, r)
+		case http.MethodPut:
+			http.Error(w, "Not implemented", http.StatusNotImplemented)
+		case http.MethodDelete:
+			http.Error(w, "Not implemented", http.StatusNotImplemented)
+		}
+	}
+}
+
+// HandlerNotifications main handler for route related to `/notification` requests
+func HandlerNotifications() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			//handleNotificationsGet(w, r)
+		case http.MethodPost:
+			handleNotificationsPost(w, r)
+		case http.MethodPut:
+			http.Error(w, "Not implemented", http.StatusNotImplemented)
+		case http.MethodDelete:
+			http.Error(w, "Not implemented", http.StatusNotImplemented)
+		}
 	}
 }
 
@@ -102,7 +123,7 @@ func HandlerPolicy() func(http.ResponseWriter, *http.Request) {
 
 // HandlerDiag main handler for route related to `/diag` requests
 func HandlerDiag(t time.Time) func(http.ResponseWriter, *http.Request) {
-	appStart = t	// Pass application start time for multiple function access
+	appStart = t // Pass application start time for multiple function access
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -131,7 +152,7 @@ func handleCountryGet(w http.ResponseWriter, r *http.Request) {
 	countryName := p(r, "country_name")
 	// Handling case sensitivity of country name (lowercase all letters then capitalize first letter)
 	countryName = strings.ToLower(countryName) // All letters lower case
-	countryName = strings.Title(countryName) // First letter capitalized
+	countryName = strings.Title(countryName)   // First letter capitalized
 
 	// Extract optional 'scope' parameter
 	scope := r.URL.Query().Get("scope")
@@ -165,7 +186,7 @@ func handlePolicyGet(w http.ResponseWriter, r *http.Request) {
 	countryName := p(r, "country_name")
 	// Handling case sensitivity of country name (lowercase all letters then capitalize first letter)
 	countryName = strings.ToLower(countryName) // All letters lower case
-	countryName = strings.Title(countryName) // First letter capitalized
+	countryName = strings.Title(countryName)   // First letter capitalized
 
 	// Extract optional 'scope' parameter
 	scope := r.URL.Query().Get("scope")
@@ -183,6 +204,46 @@ func handlePolicyGet(w http.ResponseWriter, r *http.Request) {
 
 	// Send result for processing
 	resWithData(w, result)
+}
+
+// handleNotificationsPost utility function, package level, to handle POST request to notification route
+func handleNotificationsPost(w http.ResponseWriter, r *http.Request) {
+	var webhookForm WebhookForm
+
+	// Set response to be of JSON type
+	http.Header.Add(w.Header(), "content-type", "application/json")
+	parts := strings.Split(r.URL.Path, "/")
+	// error handling
+	if len(parts) != 5 || parts[3] != "notifications" {
+		http.Error(w, "Malformed URL", http.StatusBadRequest)
+		return
+	}
+
+	/*  JSON example for Body
+		{
+	    "url": "https://localhost:8080/client/",
+		"timeout": 3600,
+		"field": "stringency",
+		"country": "France",
+		"trigger": "ON_CHANGE"
+		}
+	*/
+
+	// Decode JSON body
+	err := json.NewDecoder(r.Body).Decode(&webhookForm)
+	if err != nil {
+		switch err := err.(type) {
+		case *json.SyntaxError:
+			fmt.Printf("json syntax error: %s at offset %d\n", err, err.Offset)
+			http.Error(w, "Malformed Body", http.StatusBadRequest)
+		default:
+			fmt.Printf("json default: %s", err)
+			http.Error(w, "Error in JSON", http.StatusBadRequest)
+		}
+	}
+
+	// Send result for processing
+	resWithData(w, "resData")
 }
 
 // handleDiagGet utility function, package level, to handle GET request to diag route
@@ -225,7 +286,7 @@ func handleDiagGet(w http.ResponseWriter, r *http.Request) {
 	}
 	// Send status and diagnostic report
 	w.WriteHeader(http.StatusOK)
-	w.Write(report)		 		 // Send result for processing
+	w.Write(report) // Send result for processing
 }
 
 // p is a shortened function for extracting URL parameters
@@ -243,17 +304,6 @@ func split(s, sep string, pos int) (string, string) {
 		str := strings.Split(s, sep)
 		// Join seperated parts using sep character and return both split ends of the string
 		return strings.Join(str[:pos], sep), strings.Join(str[pos:], sep)
-	}
-}
-
-// getLimit converts string number into int and returns int, for limiting option
-func getLimit(s string) int {
-	// convert string number to an int and handle error for non digit characters
-	if n, err := strconv.Atoi(s); err == nil {
-		return n
-	} else {
-		// return '20' to fixed limit
-		return 20
 	}
 }
 

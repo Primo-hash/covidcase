@@ -2,3 +2,5 @@ github.com/alediaferia/gocountries v0.0.0-20150710192521-aaf4e81715ec h1:MpKw0dV
 github.com/alediaferia/gocountries v0.0.0-20150710192521-aaf4e81715ec/go.mod h1:09hXhYnr/5zMJyMd5xTdVc/FIbC04dOLHnDshIwW2Cs=
 github.com/go-chi/chi v1.5.3 h1:+DVDS9/D3MTbEu3WrrH3oz9oP6PlSPSNj8LLw3X17yU=
 github.com/go-chi/chi v1.5.3/go.mod h1:Q8xfe6s3fjZyMr8ZTv5jL+vxhVaFyCq2s+RvSfzTD0E=
+github.com/go-chi/cors v1.2.0 h1:tV1g1XENQ8ku4Bq3K9ub2AtgG+p16SmzeMSGTwrOKdE=
+github.com/go-chi/cors v1.2.0/go.mod h1:sSbTewc+6wYHBBCW7ytsFSn836hqM7JxpglAy2Vzc58=
