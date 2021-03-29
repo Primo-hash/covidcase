@@ -40,9 +40,10 @@ func main() {
 	r.Use(middleware.Logger)
 
 	// Routes
+	r.Get("/corona/v1/notifications", covidcase.HandlerDiag(appStart))	// Pass appStart time value for use in this route
 	r.Get("/corona/v1/country/"+COUNTRY, covidcase.HandlerCountry()) // optional query parameter "scope" as start/end date
-	r.Get("/exchange/v1/exchangeborder/"+COUNTRY, covidcase.HandlerBorder())
-	r.Get("/exchange/v1/diag/", covidcase.HandlerDiag(appStart))	// Pass appStart time value for use in this route
+	r.Get("/corona/v1/policy/"+COUNTRY, covidcase.HandlerPolicy()) // optional query parameter "scope" as start/end date
+	r.Get("/diag", covidcase.HandlerDiag(appStart))	// Pass appStart time value for use in this route
 	r.Get("/*", covidcase.HandlerLostUser) // Route for any other query not handled by API
 
 	log.Fatal(http.ListenAndServe(":"+port, r))
