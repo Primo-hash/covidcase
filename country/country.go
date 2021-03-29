@@ -14,9 +14,8 @@ URL list for 'REST Countries API' to be modified to query needs
 const BASEURL = "https://covid-api.mmediagroup.fr/v1/cases" // For healthchecks
 const CASEURL = "https://covid-api.mmediagroup.fr/v1/cases?country=%s" // For all covid cases
 const SCOPEURL = "https://covid-api.mmediagroup.fr/v1/history?country=%s&status=Confirmed" // Cases within a date scope
-const ALPHA3URL = "https://restcountries.eu/rest/v2/name/%s" // Retrieves general info about a country
 
-// Diagnose struct for JSON encoding
+// CaseInfo struct for JSON encoding HTTP request data
 type CaseInfo struct {
 	Country              string  `json:"country"`
 	Continent            string  `json:"continent"`
@@ -24,12 +23,6 @@ type CaseInfo struct {
 	Confirmed            float64 `json:"confirmed"`
 	Recovered            float64 `json:"recovered"`
 	PopulationPercentage string `json:"population_percentage"`
-}
-
-// Country struct for data extraction of ALPHA-3 code
-type Country []struct {
-	Alpha3Code     string    `json:"alpha3Code"`
-	Region         string    `json:"region"`
 }
 
 /*
@@ -103,32 +96,9 @@ func GetCurrency(countryName string) (string, error) {
 	countries, err := gocountries.CountriesByName(countryName)
 	// Extract first country
 	c := (countries)[0]
-	// Extract currency code
+	// Extract policy code
 	currencyCode := c.Currencies[0]
 	return currencyCode, err
-}
-
-/*
-GetAlpha3 returns a string of specified Country's ALPHA-3 code and Continent
-*/
-func GetAlpha3(countryName string) (string, string, error) {
-	var countries Country // Holds JSON object values, query might return multiple countries
-
-	// Insert parameters into CASEURL for HTTP GET request
-	resData, err := http.Get(fmt.Sprintf(ALPHA3URL, countryName))
-	if err != nil { // Error handling data
-		return "", "", err
-	}
-
-	// Decode into countries object
-	err = json.NewDecoder(resData.Body).Decode(&countries)
-	if err != nil {
-		return "", "", err
-	}
-	// Extract ALPHA-3 from first country
-	alpha := countries[0].Alpha3Code
-	continent := countries[0].Region
-	return alpha, continent, nil
 }
 
 /*
